@@ -1,20 +1,23 @@
-# medmatchbot.py
+# MedMatchBot.py
 # MedMatchBot - Telegram bot with 3-star verification and photo upload
-# Reads BOT_TOKEN and ADMIN_ID from environment variables.
+# Hardcoded values for BOT_TOKEN, ADMIN_ID, and WEBHOOK_URL as provided.
 
 import os
 import sqlite3
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters,
     ContextTypes, CallbackQueryHandler
 )
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+# Enable logging
+logging.basicConfig(level=logging.INFO)
 
-if not BOT_TOKEN or ADMIN_ID == 0:
-    raise RuntimeError("BOT_TOKEN and ADMIN_ID must be set as environment variables")
+# Hardcoded values (as requested)
+BOT_TOKEN = "7874891680:AAEDRl_3Xi2HzRkOvbtdwW2hoX4mZTY8UdE"
+ADMIN_ID = 6371731528
+WEBHOOK_URL = "https://your-render-app-name.onrender.com/webhook"
 
 # ----------------- Database Setup -----------------
 conn = sqlite3.connect("medmatchbot.db", check_same_thread=False)
@@ -108,8 +111,11 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = update.effective_user.id
     ensure_user_row(user_id)
-    user = get_user(user_id)
     text = update.message.text.strip()
+    user = get_user(user_id)
+    if not user:
+        return  # Shouldn't happen, but safety check
+
     # 1: name
     if not user[1] or user[1].strip() == "":
         cursor.execute("UPDATE users SET name=? WHERE user_id=?", (text, user_id))
@@ -325,6 +331,10 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ----------------- Main -----------------
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+    
+    # Set webhook for Render (serverless)
+    app.bot.set_webhook(url=WEBHOOK_URL)
+    
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("profile", profile_cmd))
     app.add_handler(CommandHandler("findmatch", find_match))
@@ -336,8 +346,15 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     app.add_handler(CallbackQueryHandler(button_handler))
-    print("Bot is running...")
-    app.run_polling()
+    
+    print("Bot is running with webhooks...")
+    # Run with webhook listener
+    port = int(os.environ.get('PORT', 5000))
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        webhook_url=WEBHOOK_URL
+    )
 
 if __name__ == "__main__":
     main()
