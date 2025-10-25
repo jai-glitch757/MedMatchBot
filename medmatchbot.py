@@ -1,6 +1,6 @@
 # MedMatchBot.py
 # MedMatchBot - Telegram bot with 3-star verification and photo upload
-# Hardcoded values for BOT_TOKEN, ADMIN_ID, and WEBHOOK_URL as provided.
+# Hardcoded values as provided by user. Uses webhooks for Render.
 
 import os
 import sqlite3
@@ -14,10 +14,10 @@ from telegram.ext import (
 # Enable logging
 logging.basicConfig(level=logging.INFO)
 
-# Hardcoded values (as requested)
+# Hardcoded values (as provided)
 BOT_TOKEN = "7874891680:AAEDRl_3Xi2HzRkOvbtdwW2hoX4mZTY8UdE"
 ADMIN_ID = 6371731528
-WEBHOOK_URL = "https://your-render-app-name.onrender.com/webhook"
+WEBHOOK_URL = "https://medmatchbot.onrender.com/webhook"  # Updated as provided; replace 'your-render-app-name' with your actual Render app name
 
 # ----------------- Database Setup -----------------
 conn = sqlite3.connect("medmatchbot.db", check_same_thread=False)
@@ -331,10 +331,6 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ----------------- Main -----------------
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-    
-    # Set webhook for Render (serverless)
-    app.bot.set_webhook(url=WEBHOOK_URL)
-    
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("profile", profile_cmd))
     app.add_handler(CommandHandler("findmatch", find_match))
@@ -347,12 +343,12 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     app.add_handler(CallbackQueryHandler(button_handler))
     
-    print("Bot is running with webhooks...")
-    # Run with webhook listener
+    # Webhook setup for Render
     port = int(os.environ.get('PORT', 5000))
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
+        url_path="webhook",
         webhook_url=WEBHOOK_URL
     )
 
