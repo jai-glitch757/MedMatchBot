@@ -1,6 +1,8 @@
 # MedMatchBot.py
 # MedMatchBot - Telegram bot with 3-star verification and photo upload
 # Hardcoded values as provided by user. Uses webhooks for Render.
+# Bot username: @Medimatch_bot
+# Bot link: http://t.me/Medimatch_bot
 
 import os
 import sqlite3
@@ -17,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 # Hardcoded values (as provided)
 BOT_TOKEN = "7874891680:AAEDRl_3Xi2HzRkOvbtdwW2hoX4mZTY8UdE"
 ADMIN_ID = 6371731528
-WEBHOOK_URL = "https://medmatchbot.onrender.com/webhook"  # Updated as provided; replace 'your-render-app-name' with your actual Render app name
+WEBHOOK_URL = "https://medmatchbot.onrender.com/webhook"  # EDIT THIS: Replace 'your-render-app-name' with your actual Render app name (e.g., 'medmatchbot')
 
 # ----------------- Database Setup -----------------
 conn = sqlite3.connect("medmatchbot.db", check_same_thread=False)
@@ -354,3 +356,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
