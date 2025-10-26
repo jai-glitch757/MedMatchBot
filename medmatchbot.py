@@ -13,6 +13,7 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters,
     ContextTypes, CallbackQueryHandler
 )
+from flask import Flask  # For root response
 
 # Enable logging
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +28,13 @@ CHANNEL_LINK = os.environ.get('CHANNEL_LINK')
 # Ensure required vars are set
 if not BOT_TOKEN or not WEBHOOK_URL or not CHANNEL_USERNAME or not CHANNEL_LINK:
     raise ValueError("Missing required environment variables: BOT_TOKEN, WEBHOOK_URL, CHANNEL_USERNAME, CHANNEL_LINK")
+
+# Flask app for root response
+app_flask = Flask(__name__)
+
+@app_flask.route('/')
+def home():
+    return "Bot is running!"
 
 # ----------------- Database Setup -----------------
 conn = sqlite3.connect("medmatchbot.db", check_same_thread=False)
@@ -386,7 +394,4 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "/start - create or update profile\n"
-        "/profile - view your profile\n"
-        "/findmatch - find matches (requires at least 2 stars)\n"
-        "To upload selfie/ID:
+        "/start
