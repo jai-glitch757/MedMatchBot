@@ -13,7 +13,6 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters,
     ContextTypes, CallbackQueryHandler
 )
-from flask import Flask  # Add this for basic web response
 
 # Enable logging
 logging.basicConfig(level=logging.INFO)
@@ -388,3 +387,6 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "/start - create or update profile\n"
+        "/profile - view your profile\n"
+        "/findmatch - find matches (requires at least 2 stars)\n"
+        "To upload selfie/ID:
