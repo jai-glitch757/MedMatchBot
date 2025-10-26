@@ -8,12 +8,12 @@
 import os
 import sqlite3
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters,
     ContextTypes, CallbackQueryHandler
 )
-from flask import Flask  # For root response
+from flask import Flask, request
 
 # Enable logging
 logging.basicConfig(level=logging.INFO)
@@ -29,12 +29,12 @@ CHANNEL_LINK = os.environ.get('CHANNEL_LINK')
 if not BOT_TOKEN or not WEBHOOK_URL or not CHANNEL_USERNAME or not CHANNEL_LINK:
     raise ValueError("Missing required environment variables: BOT_TOKEN, WEBHOOK_URL, CHANNEL_USERNAME, CHANNEL_LINK")
 
-# Flask app for root response
-app_flask = Flask(__name__)
+# Flask app
+app = Flask(__name__)
 
-@app_flask.route('/')
-def home():
-    return "Bot is running!"
+# Telegram bot and application
+bot = Bot(token=BOT_TOKEN)
+application = ApplicationBuilder().token(BOT_TOKEN).build()
 
 # ----------------- Database Setup -----------------
 conn = sqlite3.connect("medmatchbot.db", check_same_thread=False)
@@ -394,4 +394,3 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "/start
