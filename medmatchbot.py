@@ -3,6 +3,7 @@
 # Hardcoded values as provided by user. Uses webhooks for Render.
 # Bot username: @Medimatch_bot
 # Bot link: http://t.me/Medimatch_bot
+# Channel requirement: Users must join @medicosssssssss (https://t.me/medicosssssssss) to use the bot.
 
 import os
 import sqlite3
@@ -19,7 +20,9 @@ logging.basicConfig(level=logging.INFO)
 # Hardcoded values (as provided)
 BOT_TOKEN = "7874891680:AAEDRl_3Xi2HzRkOvbtdwW2hoX4mZTY8UdE"
 ADMIN_ID = 6371731528
-WEBHOOK_URL = "https://medmatchbot.onrender.com/webhook"  # EDIT THIS: Replace 'your-render-app-name' with your actual Render app name (e.g., 'medmatchbot')
+WEBHOOK_URL = "https://your-render-app-name.onrender.com/webhook"  # EDIT THIS: Replace 'your-render-app-name' with your actual Render app name (e.g., 'medmatchbot')
+CHANNEL_USERNAME = "@medicosssssssss"  # Channel username for membership check (users must join this)
+CHANNEL_LINK = "https://t.me/medicosssssssss"  # Channel link for joining (users must join this)
 
 # ----------------- Database Setup -----------------
 conn = sqlite3.connect("medmatchbot.db", check_same_thread=False)
@@ -77,15 +80,40 @@ def ensure_user_row(user_id):
         cursor.execute("INSERT INTO users (user_id) VALUES (?)", (user_id,))
         conn.commit()
 
+async def check_channel_membership(context, user_id):
+    try:
+        member = await context.bot.get_chat_member(chat_id=CHANNEL_USERNAME, user_id=user_id)
+        return member.status in ["member", "administrator", "creator"]
+    except Exception as e:
+        logging.error(f"Error checking channel membership: {e}")
+        return True  # Allow if check fails to avoid blocking users
+
 # ----------------- Commands / Handlers -----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    # Check if user is in the required channel
+    if not await check_channel_membership(context, user_id):
+        keyboard = [[InlineKeyboardButton("Join Channel", url=CHANNEL_LINK)]]
+        await update.message.reply_text(
+            "To use this bot, please join our channel first!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+    # Proceed if joined
     ensure_user_row(user_id)
     await update.message.reply_text("Welcome to MedMatchBot! Let's create your profile.\nWhat's your full name?")
     return
 
 async def profile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    # Check channel membership for other commands too (optional, but added for consistency)
+    if not await check_channel_membership(context, user_id):
+        keyboard = [[InlineKeyboardButton("Join Channel", url=CHANNEL_LINK)]]
+        await update.message.reply_text(
+            "To use this bot, please join our channel first!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
     user = get_user(user_id)
     if not user:
         await update.message.reply_text("You have no profile yet. Send /start to create one.")
@@ -112,6 +140,14 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message is None or update.message.text is None:
         return
     user_id = update.effective_user.id
+    # Check channel membership
+    if not await check_channel_membership(context, user_id):
+        keyboard = [[InlineKeyboardButton("Join Channel", url=CHANNEL_LINK)]]
+        await update.message.reply_text(
+            "To use this bot, please join our channel first!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
     ensure_user_row(user_id)
     text = update.message.text.strip()
     user = get_user(user_id)
@@ -196,6 +232,14 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Photo handler: forward image to admin for manual verification
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    # Check channel membership
+    if not await check_channel_membership(context, user_id):
+        keyboard = [[InlineKeyboardButton("Join Channel", url=CHANNEL_LINK)]]
+        await update.message.reply_text(
+            "To use this bot, please join our channel first!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
     ensure_user_row(user_id)
     user = get_user(user_id)
     if not user:
@@ -219,6 +263,14 @@ likes = {}  # {liker_id: set(target_ids)}
 
 async def find_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    # Check channel membership
+    if not await check_channel_membership(context, user_id):
+        keyboard = [[InlineKeyboardButton("Join Channel", url=CHANNEL_LINK)]]
+        await update.message.reply_text(
+            "To use this bot, please join our channel first!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
     user = get_user(user_id)
     if not user or user[11] < 2:
         await update.message.reply_text("You need at least 2 stars to start finding matches.")
@@ -250,6 +302,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
     user_id = query.from_user.id
+    # Check channel membership for button interactions
+    if not await check_channel_membership(context, user_id):
+        keyboard = [[InlineKeyboardButton("Join Channel", url=CHANNEL_LINK)]]
+        await query.edit_message_text(
+            "To use this bot, please join our channel first!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
     action, target_id = data.split("_")
     target_id = int(target_id)
     if action == "like":
@@ -310,50 +370,4 @@ async def unverify_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("Unauthorized - admin only.")
-        return
-    cursor.execute("SELECT user_id, name, star FROM users")
-    rows = cursor.fetchall()
-    if not rows:
-        await update.message.reply_text("No users yet.")
-        return
-    text = "\n".join([f"{r[0]} - {r[1] or '-'} - {get_star_text(r[2])}" for r in rows])
-    await update.message.reply_text(text)
-
-async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (
-        "/start - create or update profile\n"
-        "/profile - view your profile\n"
-        "/findmatch - find matches (requires at least 2 stars)\n"
-        "To upload selfie/ID: simply send a PHOTO to the bot\n\n"
-        "Admin commands: /check, /verify, /unverify, /list (admin only)"
-    )
-    await update.message.reply_text(text)
-
-# ----------------- Main -----------------
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("profile", profile_cmd))
-    app.add_handler(CommandHandler("findmatch", find_match))
-    app.add_handler(CommandHandler("check", check_user))
-    app.add_handler(CommandHandler("verify", verify_user))
-    app.add_handler(CommandHandler("unverify", unverify_user))
-    app.add_handler(CommandHandler("list", list_users))
-    app.add_handler(CommandHandler("help", help_cmd))
-    app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    
-    # Webhook setup for Render
-    port = int(os.environ.get('PORT', 5000))
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path="webhook",
-        webhook_url=WEBHOOK_URL
-    )
-
-if __name__ == "__main__":
-    main()
-    
+        await update.message.reply_text("Unauthorized - admin only
