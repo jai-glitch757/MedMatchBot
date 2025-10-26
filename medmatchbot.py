@@ -1,9 +1,9 @@
 # MedMatchBot.py
 # MedMatchBot - Telegram bot with 3-star verification and photo upload
-# Hardcoded values as provided by user. Uses webhooks for Render.
+# Uses environment variables for security.
 # Bot username: @Medimatch_bot
 # Bot link: http://t.me/Medimatch_bot
-# Channel requirement: Users must join @medicosssssssss (https://t.me/medicosssssssss) to use the bot.
+# Channel requirement: Users must join the channel specified in env vars.
 
 import os
 import sqlite3
@@ -17,12 +17,16 @@ from telegram.ext import (
 # Enable logging
 logging.basicConfig(level=logging.INFO)
 
-# Hardcoded values (as provided)
-BOT_TOKEN = "7874891680:AAEDRl_3Xi2HzRkOvbtdwW2hoX4mZTY8UdE"
-ADMIN_ID = 6371731528
-WEBHOOK_URL = "https://your-render-app-name.onrender.com/webhook"  # EDIT THIS: Replace 'your-render-app-name' with your actual Render app name (e.g., 'medmatchbot')
-CHANNEL_USERNAME = "@medicosssssssss"  # Channel username for membership check (users must join this)
-CHANNEL_LINK = "https://t.me/medicosssssssss"  # Channel link for joining (users must join this)
+# Read from environment variables (set in Render)
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
+ADMIN_ID = int(os.environ.get('ADMIN_ID', 0))
+WEBHOOK_URL = os.environ.get('WEBHOOK_URL')
+CHANNEL_USERNAME = os.environ.get('CHANNEL_USERNAME')
+CHANNEL_LINK = os.environ.get('CHANNEL_LINK')
+
+# Ensure required vars are set
+if not BOT_TOKEN or not WEBHOOK_URL or not CHANNEL_USERNAME or not CHANNEL_LINK:
+    raise ValueError("Missing required environment variables: BOT_TOKEN, WEBHOOK_URL, CHANNEL_USERNAME, CHANNEL_LINK")
 
 # ----------------- Database Setup -----------------
 conn = sqlite3.connect("medmatchbot.db", check_same_thread=False)
@@ -370,4 +374,10 @@ async def unverify_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
-        await update.message.reply_text("Unauthorized - admin only
+        await update.message.reply_text("Unauthorized - admin only.")
+        return
+    cursor.execute("SELECT user_id, name, star FROM users")
+    rows = cursor.fetchall()
+    if not rows:
+        await update.message.reply_text("No users yet.")
+        return
