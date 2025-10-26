@@ -13,6 +13,7 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters,
     ContextTypes, CallbackQueryHandler
 )
+from flask import Flask  # Add this for basic web response
 
 # Enable logging
 logging.basicConfig(level=logging.INFO)
@@ -381,3 +382,9 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not rows:
         await update.message.reply_text("No users yet.")
         return
+    text = "\n".join([f"{r[0]} - {r[1] or '-'} - {get_star_text(r[2])}" for r in rows])
+    await update.message.reply_text(text)
+
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (
+        "/start - create or update profile\n"
